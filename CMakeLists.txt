@@ -102,7 +102,7 @@ CPMAddPackage(
   NAME aurora
   unset(_link_lower)
   GITHUB_REPOSITORY encounter/aurora
-  GIT_TAG bd20b65d59c2bd119e078ee87a8b896cc82994d2
+  GIT_TAG 156f9a65e38db18a8fc93b30271703e58fa339f5
   OPTIONS
     "AURORA_ENABLE_GX OFF"
 )
