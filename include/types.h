@@ -7,7 +7,13 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdarg.h>
-#include <intrin.h>
+
+#ifdef _MSC_VER
+  #include <intrin.h>
+#else
+  #include <x86intrin.h>
+#endif
+
 #include <dolphin/types.h>
 #include "macros.h"
 
