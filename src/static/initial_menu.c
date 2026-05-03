@@ -337,6 +337,10 @@ extern void keycheck() {
 static OSMessageQueue commandQ;
 static int fadeout_step;
 static int load_game_done;
+#ifdef TARGET_PC
+static Z_OSTime fadeout_step1_start;
+#define FADEOUT_STEP1_DURATION_TICKS OSMicrosecondsToTicks(533312ull)
+#endif
 static Gfx gfxbuf[16];
 static OSMessageQueue statusQ;
 static OSThread* Thread_p;
@@ -344,7 +348,7 @@ static void* initialMenuStack;
 static OSMessage commandMsgBuf[2];
 static OSMessage statusMsgBuf[1];
 
-extern void proc(void* arg) {
+extern void* proc(void* arg) {
   u32 msg;
   int proc_done;
   OSTimer timer;
@@ -383,8 +387,18 @@ extern void proc(void* arg) {
     if (fadeout_step == 0 && select_done && load_game_done) {
       fadeout_step = 1;
       osSetTimer(&timer, OSMicrosecondsToTicks(533312ull), 0, &commandQ, (OSMessage)INITIAL_MENU_OSMESG_FADEOUT_STEP);
+#ifdef TARGET_PC
+      fadeout_step1_start = osGetTime();
+#endif
       JC_JFWDisplay_startFadeOut(JC_JFWDisplay_getManager(), 32);
     }
+
+#ifdef TARGET_PC
+    /* OSSetAlarm is a no-op on PC so the timer never fires; advance after the same delay. */
+    if (fadeout_step == 1 && (osGetTime() - fadeout_step1_start) >= FADEOUT_STEP1_DURATION_TICKS) {
+      fadeout_step = 2;
+    }
+#endif
 
     if ((menu_step != 0 && menu_step != 3) || dvderr_draw() == FALSE) {
       JW_BeginFrame();
@@ -402,10 +416,12 @@ extern void proc(void* arg) {
   } while (!proc_done);
 
   osSendMesg(&statusQ, (OSMessage)msg, OS_MESSAGE_NOBLOCK); // signal done
+
+  return NULL;
 }
 
 static void* my_alloc(size_t size) {
-  return JW_Alloc(size, 32);
+  return JW_Alloc(size, 4096);
 }
 
 static void my_free(void* ptr) {
@@ -425,10 +441,16 @@ extern void initial_menu_init() {
   else {
     osCreateMesgQueue(&commandQ, commandMsgBuf, 2);
     osCreateMesgQueue(&statusQ, statusMsgBuf, 1);
-    osCreateThread2(Thread_p, 1, &proc, NULL, (void*)((int)initialMenuStack + INITIAL_MENU_STACK_SIZE), INITIAL_MENU_STACK_SIZE, 1);
+    osCreateThread2(Thread_p, 1, &proc, NULL, (void*)((uintptr_t)initialMenuStack + INITIAL_MENU_STACK_SIZE), INITIAL_MENU_STACK_SIZE, 1);
     osStartThread(Thread_p);
     JC_JFWDisplay_startFadeIn(JC_JFWDisplay_getManager(), 32);
     osSendMesg(&commandQ, (OSMessage)INITIAL_MENU_OSMESG_INIT_DONE, OS_MESSAGE_NOBLOCK);
+  }
+}
+
+extern void initial_menu_signal_load_done(void) {
+  if (Thread_p != NULL) {
+    osSendMesg(&commandQ, (OSMessage)INITIAL_MENU_OSMESG_LOAD_GAME_DONE, OS_MESSAGE_NOBLOCK);
   }
 }
 
@@ -436,10 +458,8 @@ extern void initial_menu_cleanup() {
   int msg;
 
   if (Thread_p != NULL) {
-    if (!osRecvMesg(&commandQ, (OSMessage*)&msg, OS_MESSAGE_NOBLOCK)) {
-      osSendMesg(&commandQ, (OSMessage)INITIAL_MENU_OSMESG_LOAD_GAME_DONE, OS_MESSAGE_NOBLOCK);
-      osRecvMesg(&statusQ, (OSMessage*)&msg, OS_MESSAGE_BLOCK);
-    }
+    osSendMesg(&commandQ, (OSMessage)INITIAL_MENU_OSMESG_LOAD_GAME_DONE, OS_MESSAGE_NOBLOCK);
+    osRecvMesg(&statusQ, (OSMessage*)&msg, OS_MESSAGE_BLOCK);
 
     osDestroyThread(Thread_p);
   }

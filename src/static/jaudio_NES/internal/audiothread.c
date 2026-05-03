@@ -18,7 +18,11 @@
 #include "jaudio_NES/playercall.h"
 #include "jaudio_NES/dspbuf.h"
 
+#if defined(TARGET_PC)
+#define AUDIO_STACK_SIZE 0x2000
+#else
 #define AUDIO_STACK_SIZE 0x1000
+#endif
 #define AUDIOPROC_MQ_BUF_COUNT 16
 
 #define AUDIOPROC_MESSAGE_UPDATE_DAC 0
@@ -91,7 +95,7 @@ static void __DspSync(__OSInterrupt interrupt, OSContext* context) {
 
 static void __DspReg(void) {
     BOOL enable = OSDisableInterrupts();
-    __OSSetInterruptHandler(OS_INTR_DSP_DSP, &__DspSync);
+    __OSSetInterruptHandler(__OS_INTERRUPT_DSP_DSP, &__DspSync);
     OSRestoreInterrupts(enable);
 }
 

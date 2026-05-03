@@ -345,6 +345,8 @@ static const s32 checkTableNG[] = {
     CARD_RESULT_WRONGDEVICE
 };
 
+#define CARD_NUM_CHANS 2
+
 static s32 famicom_getSaveChan(int nesrom_memcard, s32* result) {
     s32 chan_result[2];
     s32 card_err;
@@ -2350,13 +2352,13 @@ static void nogbaInput() {
             {
                 InputValid[port] = true;
 
-                InputData[port] = ((JUTGamePad*)gamePad)[port].mButtons.mButton;
+                InputData[port] = gamePad[port].mButtons.mButton;
                 
-                if (((JUTGamePad*)gamePad)[port].mButtons.mAnalogL != 0) {
+                if (gamePad[port].mButtons.mAnalogL != 0) {
                     InputData[port] |= JUTGamePad::L;
                 }
 
-                if (((JUTGamePad*)gamePad)[port].mButtons.mAnalogR != 0) {
+                if (gamePad[port].mButtons.mAnalogR != 0) {
                     InputData[port] |= JUTGamePad::R;
                 }
                 break;
@@ -2554,7 +2556,7 @@ extern void famicom_1frame() {
     famicom_draw();
 
     /* If filer mode is enabled, controller 4 L press toggles process profiling bar */
-    if (filer_mode_enable && (((JUTGamePad*)gamePad)[3].mButtons.mTrigger & JUTGamePad::L)) {
+    if (filer_mode_enable && (gamePad[3].mButtons.mTrigger & JUTGamePad::L)) {
         JUTProcBar::getManager()->setVisible(JUTProcBar::getManager()->isVisible() ? FALSE : TRUE);
     }
 
